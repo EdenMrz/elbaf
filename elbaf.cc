@@ -1,3 +1,4 @@
+#include <fstream>
 #include <iostream>
 #include <string>
 
@@ -46,10 +47,54 @@ bool ElbafFile::compress() {
 		return false;
 	}
 
-	char tmp;
-	while (input.get(tmp)) {
-		output.put(tmp);
+	deltaCompress(input, output);
+	output.flush();
+
+	ifstream compressed { outname, ios_base::binary };
+	if (!compressed.good()) {
+		std::cerr << "Error opening file '" << outname << "'\n";
+		return false;
 	}
+	string decompressed_name = outname + ".back";
+	ofstream decompressed { decompressed_name, ios_base::binary | ios_base::trunc };
+	if (!decompressed.good()) {
+		std::cerr << "Error opening '" << decompressed_name << "'\n";
+		return false;
+	}
+
+	deltaDecompress(compressed, decompressed);
 	
 	return true;
+}
+
+// NOTE: does not change the file size as data is grouped by byte,
+//       so (current - previous) will take as many bits as current
+//       or previous
+void ElbafFile::deltaCompress(ifstream& input, ofstream& output) {
+	int i = 0;
+	char current;
+	char previous = 0;
+	while (input.get(current)) {
+		if (i == 0)
+			output.put(current);
+		else
+			output.put(current - previous);
+		previous = current;
+		i++;
+	}
+}
+
+void ElbafFile::deltaDecompress(ifstream& input, ofstream& output) {
+	int i = 0;
+	char current;
+	char previous = 0;
+	while (input.get(current)) {
+		char next = current + previous;
+		if (i == 0)
+			output.put(current);
+		else
+			output.put(next);
+		previous = next;
+		i++;
+	}
 }
