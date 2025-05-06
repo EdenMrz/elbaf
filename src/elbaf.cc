@@ -1,6 +1,7 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <iomanip>
 
 #include "elbaf.h"
 
@@ -15,6 +16,9 @@ int main(int argc, char** argv) {
 		std::cerr << "Compression unsuccessful\n";
 		return -1;
 	}
+
+	file.set_probabilities();
+	file.display_probabilities();
 
 	return 0;
 }
@@ -65,6 +69,38 @@ bool ElbafFile::compress() {
 	deltaDecompress(compressed, decompressed);
 	
 	return true;
+}
+
+void ElbafFile::set_probabilities() {
+	string outname { this->filename + ".elbaf" };
+	ifstream input { this-> filename, ios_base::binary };
+	if (!input.good()) {
+		std::cerr << "Error opening file '" << this->filename << "'\n";
+		return;
+	}
+
+	double total = 0;
+	char current;
+	while (input.get(current)) {
+		if (this->probability.count(current) == 0)
+			this->probability[current] = 0;
+		this->probability[current]++;
+		total++;
+	}
+
+	if (total == 0)
+		return;
+
+	for (auto& [key, value]: this->probability)
+		value = value * 100 / total;
+}
+
+void ElbafFile::display_probabilities() {
+	for (const auto& [key, value]: this->probability)
+		std::cout
+			<< "0x" << std::hex << std::setw(8) << std::setfill('0')
+			<< static_cast<unsigned int>(static_cast<unsigned char>(key))
+			<< ": " << value << '\n';
 }
 
 // NOTE: does not change the file size as data is grouped by byte,
