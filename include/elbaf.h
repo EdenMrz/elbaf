@@ -2,7 +2,7 @@
 #include <map>
 #include <fstream>
 
-using namespace std;
+namespace elbaf {
 
 bool check_parameters(int argc, char** argv);
 
@@ -13,9 +13,11 @@ public:
 	void display_probabilities();
 	bool compress();
 private:
-	void deltaCompress(ifstream& input, ofstream& output);
-	void deltaDecompress(ifstream& input, ofstream& output);
+	void deltaCompress(std::ifstream& input, std::ofstream& output);
+	void deltaDecompress(std::ifstream& input, std::ofstream& output);
 private:
-	string filename;
+	std::string filename;
 	std::map<char, double> probability;
 };
+
+}
