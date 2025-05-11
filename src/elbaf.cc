@@ -86,7 +86,9 @@ void ElbafFile::display_probabilities() {
 		std::cout
 			<< "0x" << std::hex << std::setw(8) << std::setfill('0')
 			<< static_cast<unsigned int>(static_cast<unsigned char>(key))
+			<< std::dec
 			<< ": " << value << '\n';
+	std::cout << "The dictionary has " << this->probability.size() << " symbols\n";
 }
 
 // NOTE: does not change the file size as data is grouped by byte,
