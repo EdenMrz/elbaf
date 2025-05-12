@@ -14,7 +14,8 @@ int main(int argc, char** argv)
 	}
 
 	file.set_probabilities();
-	file.display_probabilities();
+	file.set_symbols();
+	file.display_symbols();
 
 	return 0;
 }

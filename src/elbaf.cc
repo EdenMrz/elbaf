@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string>
 #include <iomanip>
+#include <vector>
 
 #include "elbaf.h"
 
@@ -68,9 +69,10 @@ void ElbafFile::set_probabilities() {
 	double total = 0;
 	char current;
 	while (input.get(current)) {
-		if (this->probability.count(current) == 0)
-			this->probability[current] = 0;
-		this->probability[current]++;
+		auto current_byte = static_cast<std::byte>(current);
+		if (this->probability.count(current_byte) == 0)
+			this->probability[current_byte] = 0;
+		this->probability[current_byte]++;
 		total++;
 	}
 
@@ -81,6 +83,29 @@ void ElbafFile::set_probabilities() {
 		value = value * 100 / total;
 }
 
+// Uses the data in the probabilites table.
+// After this call, that table is empty.
+void ElbafFile::set_symbols() {
+	if (this->probability.size() == 0)
+		return;
+
+	std::vector<bool> new_symbol { true };
+	while (this->probability.size() > 0) {
+		int max = 0;
+		std::byte max_key = std::begin(this->probability)->first;
+		for (const auto& [ key, value ] : this->probability) {
+			if (value < max)
+				continue;
+
+			max = value;
+			max_key = key;
+		}
+
+		this->symbol[max_key] = new_symbol;
+		this->probability.erase(max_key);
+	}
+}
+
 void ElbafFile::display_probabilities() {
 	for (const auto& [key, value]: this->probability)
 		std::cout
@@ -89,6 +114,24 @@ void ElbafFile::display_probabilities() {
 			<< std::dec
 			<< ": " << value << '\n';
 	std::cout << "The dictionary has " << this->probability.size() << " symbols\n";
+}
+
+void ElbafFile::display_symbols() {
+	for (const auto& [key, value]: this->symbol) {
+		std::cout
+			<< "0x" << std::hex << std::setw(8) << std::setfill('0')
+			<< static_cast<unsigned int>(static_cast<unsigned char>(key))
+			<< std::dec
+			<< ": 0x";
+		for (auto bit: value) {
+			if (bit)
+				std::cout << '1';
+			else
+				std::cout << '0';
+		}
+		std::cout << '\n';
+	}
+	std::cout << "The dictionary has " << this->symbol.size() << " symbols\n";
 }
 
 // NOTE: does not change the file size as data is grouped by byte,
