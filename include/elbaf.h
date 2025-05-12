@@ -24,4 +24,12 @@ private:
 	std::map<std::byte, std::vector<bool>> symbol;
 };
 
+class UnaryCodeGenerator {
+public:
+	constexpr UnaryCodeGenerator() {}
+	std::vector<bool> next();
+private:
+	size_t _index {0};
+};
+
 }

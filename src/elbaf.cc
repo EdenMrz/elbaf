@@ -89,7 +89,7 @@ void ElbafFile::set_symbols() {
 	if (this->probability.size() == 0)
 		return;
 
-	std::vector<bool> new_symbol { true };
+	UnaryCodeGenerator generator;
 	while (this->probability.size() > 0) {
 		int max = 0;
 		std::byte max_key = std::begin(this->probability)->first;
@@ -101,7 +101,7 @@ void ElbafFile::set_symbols() {
 			max_key = key;
 		}
 
-		this->symbol[max_key] = new_symbol;
+		this->symbol[max_key] = generator.next();
 		this->probability.erase(max_key);
 	}
 }
@@ -132,6 +132,15 @@ void ElbafFile::display_symbols() {
 		std::cout << '\n';
 	}
 	std::cout << "The dictionary has " << this->symbol.size() << " symbols\n";
+}
+
+std::vector<bool> UnaryCodeGenerator::next() {
+	std::vector<bool> ret;
+	for (int i = 0; i < _index; ++i)
+		ret.push_back(true);
+	ret.push_back(false);
+	_index++;
+	return ret;
 }
 
 // NOTE: does not change the file size as data is grouped by byte,
