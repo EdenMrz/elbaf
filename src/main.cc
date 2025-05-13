@@ -17,5 +17,10 @@ int main(int argc, char** argv)
 	file.set_symbols();
 	file.display_symbols();
 
+	std::cout << "\n\n";
+	file.display_uncompressed_bytes();
+	std::cout << "\n\n";
+	file.display_compressed_bytes();
+
 	return 0;
 }
