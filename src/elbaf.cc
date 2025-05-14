@@ -1,5 +1,6 @@
 #include <fstream>
 #include <iostream>
+#include <optional>
 #include <string>
 #include <iomanip>
 #include <vector>
@@ -13,18 +14,22 @@ using namespace std;
 namespace elbaf {
 
 bool check_parameters(int argc, char** argv) {
-	if (argc == 2) {
+	if (argc == 3) {
 		return true;
 	}
 
-	std::cout << "Usage: elbaf file\n";
+	std::cout << "Usage: elbaf inputfile outputfile\n";
 
 	return false;
 }
 
-ElbafFile::ElbafFile(char *filename):
+ElbafFile::ElbafFile(const char *filename):
 	filename { filename }
 {
+}
+
+ElbafFile::symbol_table& ElbafFile::get_symbols() {
+	return this->symbol;
 }
 
 bool ElbafFile::compress() {
@@ -133,6 +138,13 @@ void ElbafFile::display_symbols() {
 	std::cout << "The dictionary has " << this->symbol.size() << " symbols\n";
 }
 
+CodewordReader::CodewordReader(symbol_table& symbol)
+	: _symbol{symbol}
+{}
+CodewordReader::CodewordReader(symbol_table& symbol, const char* filename)
+	: _input{filename, std::ios_base::out | std::ios_base::binary}, _symbol{symbol}
+{}
+
 std::byte CodewordReader::next_byte(std::ifstream& input) {
 	if (!input.good())
 		return std::byte{0x0};
@@ -169,6 +181,14 @@ std::byte CodewordReader::next_byte(std::ifstream& input) {
 
 	return ret;
 }
+
+std::optional<std::byte> CodewordReader::next_byte() {
+	if (!_input.good())
+		return std::nullopt;
+
+	return make_optional(next_byte(_input));
+}
+
 
 void ElbafFile::display_uncompressed_bytes() {
 	ifstream input { this-> filename, ios_base::binary };
@@ -211,6 +231,20 @@ std::vector<bool> UnaryCodeGenerator::next() {
 	ret.push_back(false);
 	_index++;
 	return ret;
+}
+
+void write_to_file(std::ofstream& output, CodewordReader& reader) {
+	if (!output.good()) {
+		std::cout << "Cannot write to the file\n";
+		return;
+	}
+
+	while (true) {
+		auto byte = reader.next_byte();
+		if (!byte)
+			break;
+		output << static_cast<char>(byte.value());
+	}
 }
 
 // NOTE: does not change the file size as data is grouped by byte,

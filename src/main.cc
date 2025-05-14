@@ -1,26 +1,27 @@
 #include <iostream>
+#include <fstream>
 #include "elbaf.h"
+
+using namespace elbaf;
 
 int main(int argc, char** argv)
 {
-	if (!elbaf::check_parameters(argc, argv))
+	if (!check_parameters(argc, argv))
 		return -1;
 	
-	elbaf::ElbafFile file { argv[1] };
-	bool compression_ok = file.compress();
-	if (!compression_ok) {
-		std::cerr << "Compression unsuccessful\n";
-		return -1;
-	}
+	const char* input_filename = argv[1];
+	const char* output_filename = argv[2];
 
+	ElbafFile file { input_filename };
 	file.set_probabilities();
 	file.set_symbols();
-	file.display_symbols();
+	auto& symbols = file.get_symbols();
 
-	std::cout << "\n\n";
-	file.display_uncompressed_bytes();
-	std::cout << "\n\n";
-	file.display_compressed_bytes();
+	CodewordReader reader {symbols, input_filename };
+	auto output = std::ofstream{output_filename, std::ios_base::binary};
+
+	std::cout << "Writing compressed data to " << output_filename << '\n';
+	write_to_file(output, reader);
 
 	return 0;
 }
