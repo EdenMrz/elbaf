@@ -157,8 +157,6 @@ std::byte CodewordReader::next_byte(std::ifstream& input) {
 		uint8_t mask = 0b10000000 >> this->output_bit_no;
 		if ((*current)[this->input_bit_no])
 			this->current_byte |= std::byte{mask};
-		else
-			this->current_byte &= std::byte{static_cast<uint8_t>(~mask)};
 
 		this->output_bit_no++;
 		this->input_bit_no++;
