@@ -24,19 +24,18 @@ bool check_parameters(int argc, char** argv) {
 }
 
 ElbafFile::ElbafFile(const char *filename):
-	filename { filename }
-{
-}
+	_filename { filename }
+{}
 
-ElbafFile::symbol_table& ElbafFile::get_symbols() {
-	return this->symbol;
+prob_table& ElbafFile::get_probabilities() {
+	return this->_probability;
 }
 
 bool ElbafFile::compress() {
-	string outname { this->filename + ".elbaf" };
-	ifstream input { this-> filename, ios_base::binary };
+	string outname { this->_filename + ".elbaf" };
+	ifstream input { this->_filename, ios_base::binary };
 	if (!input.good()) {
-		std::cerr << "Error opening file '" << this->filename << "'\n";
+		std::cerr << "Error opening file '" << this->_filename << "'\n";
 		return false;
 	}
 	ofstream output { outname, ios_base::binary | ios_base::trunc };
@@ -66,10 +65,10 @@ bool ElbafFile::compress() {
 }
 
 void ElbafFile::set_probabilities() {
-	string outname { this->filename + ".elbaf" };
-	ifstream input { this-> filename, ios_base::binary };
+	string outname { this->_filename + ".elbaf" };
+	ifstream input { this->_filename, ios_base::binary };
 	if (!input.good()) {
-		std::cerr << "Error opening file '" << this->filename << "'\n";
+		std::cerr << "Error opening file '" << this->_filename << "'\n";
 		return;
 	}
 
@@ -77,54 +76,31 @@ void ElbafFile::set_probabilities() {
 	char current;
 	while (input.get(current)) {
 		auto current_byte = static_cast<std::byte>(current);
-		if (this->probability.count(current_byte) == 0)
-			this->probability[current_byte] = 0;
-		this->probability[current_byte]++;
+		if (this->_probability.count(current_byte) == 0)
+			this->_probability[current_byte] = 0;
+		this->_probability[current_byte]++;
 		total++;
 	}
 
 	if (total == 0)
 		return;
 
-	for (auto& [key, value]: this->probability)
+	for (auto& [key, value]: this->_probability)
 		value = value * 100 / total;
 }
 
-// Uses the data in the probabilites table.
-// After this call, that table is empty.
-void ElbafFile::set_symbols() {
-	if (this->probability.size() == 0)
-		return;
-
-	UnaryCodeGenerator generator;
-	while (this->probability.size() > 0) {
-		int max = 0;
-		std::byte max_key = std::begin(this->probability)->first;
-		for (const auto& [ key, value ] : this->probability) {
-			if (value < max)
-				continue;
-
-			max = value;
-			max_key = key;
-		}
-
-		this->symbol[max_key] = generator.next();
-		this->probability.erase(max_key);
-	}
-}
-
 void ElbafFile::display_probabilities() {
-	for (const auto& [key, value]: this->probability)
+	for (const auto& [key, value]: this->_probability)
 		std::cout
 			<< "0x" << std::hex << std::setw(8) << std::setfill('0')
 			<< static_cast<unsigned int>(static_cast<unsigned char>(key))
 			<< std::dec
 			<< ": " << value << '\n';
-	std::cout << "The dictionary has " << this->probability.size() << " symbols\n";
+	std::cout << "The dictionary has " << this->_probability.size() << " symbols\n";
 }
 
-void ElbafFile::display_symbols() {
-	for (const auto& [key, value]: this->symbol) {
+void ElbafFile::display_symbols(symbol_table& symbol) {
+	for (const auto& [key, value]: symbol) {
 		std::cout << std::bitset<8>(static_cast<uint8_t>(key));
 		std::cout << ": 0x";
 		for (auto bit: value) {
@@ -135,7 +111,7 @@ void ElbafFile::display_symbols() {
 		}
 		std::cout << '\n';
 	}
-	std::cout << "The dictionary has " << this->symbol.size() << " symbols\n";
+	std::cout << "The dictionary has " << symbol.size() << " symbols\n";
 }
 
 CodewordReader::CodewordReader(symbol_table& symbol)
@@ -189,9 +165,9 @@ std::optional<std::byte> CodewordReader::next_byte() {
 
 
 void ElbafFile::display_uncompressed_bytes() {
-	ifstream input { this-> filename, ios_base::binary };
+	ifstream input { this->_filename, ios_base::binary };
 	if (!input.good()) {
-		std::cerr << "Error opening file '" << this->filename << "'\n";
+		std::cerr << "Error opening file '" << this->_filename << "'\n";
 		return;
 	}
 
@@ -204,31 +180,22 @@ void ElbafFile::display_uncompressed_bytes() {
 	std::cout << i << " bytes\n";
 }
 
-void ElbafFile::display_compressed_bytes() {
-	ifstream input { this-> filename, ios_base::binary };
+void ElbafFile::display_compressed_bytes(symbol_table& symbol) {
+	ifstream input { this->_filename, ios_base::binary };
 	if (!input.good()) {
-		std::cerr << "Error opening file '" << this->filename << "'\n";
+		std::cerr << "Error opening file '" << this->_filename << "'\n";
 		return;
 	}
 
 	char tmp;
 	int i = 0;
-	CodewordReader reader {this->symbol};
+	CodewordReader reader {symbol};
 	while (input.good()) {
 		std::byte next = reader.next_byte(input);
 		std::cout << std::bitset<8>(static_cast<uint8_t>(next)) << '\n';
 		i++;
 	}
 	std::cout << i << " bytes\n";
-}
-
-std::vector<bool> UnaryCodeGenerator::next() {
-	std::vector<bool> ret;
-	for (int i = 0; i < _index; ++i)
-		ret.push_back(true);
-	ret.push_back(false);
-	_index++;
-	return ret;
 }
 
 void write_to_file(std::ofstream& output, CodewordReader& reader) {

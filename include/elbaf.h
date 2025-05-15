@@ -6,45 +6,31 @@
 
 namespace elbaf {
 
+using symbol_table = std::map<std::byte, std::vector<bool>>;
+using prob_table = std::map<std::byte, double>;
+
 bool check_parameters(int argc, char** argv);
 
 class ElbafFile {
 public:
-	using symbol_table = std::map<std::byte, std::vector<bool>>;
 	ElbafFile(const char* filename);
 	void set_probabilities();
-	void set_symbols();
 	void display_probabilities();
-	void display_symbols();
+	void display_symbols(symbol_table& symbol);
 	void display_uncompressed_bytes();
-	void display_compressed_bytes();
+	void display_compressed_bytes(symbol_table& symbol);
 	bool compress();
-	symbol_table& get_symbols();
+	prob_table& get_probabilities();
 private:
 	void deltaCompress(std::ifstream& input, std::ofstream& output);
 	void deltaDecompress(std::ifstream& input, std::ofstream& output);
 private:
-	std::string filename;
-	std::map<std::byte, double> probability;
-	symbol_table symbol;
-};
-
-class CodeGenerator {
-public:
-	virtual std::vector<bool> next() = 0;
-};
-
-class UnaryCodeGenerator : public CodeGenerator {
-public:
-	constexpr UnaryCodeGenerator() {}
-	virtual std::vector<bool> next() override;
-private:
-	size_t _index {0};
+	std::string _filename;
+	prob_table _probability;
 };
 
 class CodewordReader {
 public:
-	using symbol_table = ElbafFile::symbol_table;
 	using bit_number = std::uint8_t;
 	CodewordReader(symbol_table& symbol);
 	CodewordReader(symbol_table& symbol, const char* filename);

@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include "elbaf.h"
+#include "symbol.h"
 
 using namespace elbaf;
 
@@ -14,10 +15,10 @@ int main(int argc, char** argv)
 
 	ElbafFile file { input_filename };
 	file.set_probabilities();
-	file.set_symbols();
-	auto& symbols = file.get_symbols();
+	auto& probability = file.get_probabilities();
+	auto symbol = symbol::unary_code(probability);
 
-	CodewordReader reader {symbols, input_filename };
+	CodewordReader reader { symbol, input_filename };
 	auto output = std::ofstream{output_filename, std::ios_base::binary};
 
 	std::cout << "Writing compressed data to " << output_filename << '\n';
