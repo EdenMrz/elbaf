@@ -1,7 +1,7 @@
-#include <queue>
 #include <vector>
 #include <list>
 #include <iostream>
+#include <cassert>
 
 #include "symbol.h"
 
@@ -44,11 +44,51 @@ huffman_queue probabilities_queue(prob_table& probability) {
 	std::cout << "Probabilities: ";
 	for (const auto& [byte_value, prob]: probability) {
 		std::cout << prob << ", ";
-		ret.push(new HuffmanNode{ .probability = prob, .left = nullptr, .right = nullptr });
+		ret.push(new HuffmanNode{
+			.probability = prob,
+			.symbol = byte_value,
+			.left = nullptr, .right = nullptr });
 	}
 	std::cout << '\n';
 
 	return ret;
+}
+
+void read_huffman_tree(HuffmanNode* node, symbol_table& probability, std::vector<bool>& path) {
+	assert(node != nullptr);
+
+	if (node->left == nullptr && node->right == nullptr) {
+		std::cout << "adding symbol for " << static_cast<int>(node->symbol) << '\n';
+		probability[node->symbol] = path;
+		std::cout << "going back up, size = " << path.size() << '\n';
+	}
+
+	if (node->left) {
+		path.push_back(false);
+		std::cout << "going left\n";
+		read_huffman_tree(node->left, probability, path);
+	}
+
+	if (node->right) {
+		path.push_back(true);
+		std::cout << "going right\n";
+		read_huffman_tree(node->right, probability, path);
+	}
+
+	// moving back up a level in the tree, so remove the last element
+	path.erase(end(path));
+}
+
+void print_huffman_tree(HuffmanNode* root, int level = 0) {
+	if (root == nullptr)
+		return;
+
+	for (int i = 0; i < level; i++)
+		std::cout << "\t";
+	std::cout << "-> " << static_cast<int>(root->symbol) << '\n';
+	level++;
+	print_huffman_tree(root->left, level);
+	print_huffman_tree(root->right, level);
 }
 
 symbol_table huffman_code(prob_table& probability) {
@@ -56,11 +96,14 @@ symbol_table huffman_code(prob_table& probability) {
 	HuffmanNode* root = build_huffman_tree(prob_queue);
 
 	// TODO: get the symbols from the tree
-	// ...
+	symbol_table symbols;
+	std::vector<bool> path;
+	read_huffman_tree(root, symbols, path);
+	print_huffman_tree(root);
 
 	free_huffman_tree(root);
 
-	return {};
+	return symbols;
 }
 
 HuffmanNode* build_huffman_tree(huffman_queue& prob_node) {

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <list>
 #include <vector>
 #include <utility>
 #include <queue>
@@ -22,6 +21,8 @@ private:
 
 struct HuffmanNode {
 	double probability;
+	// matters only when left and right are null
+	std::byte symbol;
 	HuffmanNode* left;
 	HuffmanNode* right;
 
