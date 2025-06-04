@@ -10,7 +10,6 @@ using symbol_table = std::map<std::byte, std::vector<bool>>;
 using prob_table = std::map<std::byte, double>;
 
 bool check_parameters(int argc, char** argv);
-
 class ElbafFile {
 public:
 	ElbafFile(const char* filename);

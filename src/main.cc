@@ -16,7 +16,10 @@ int main(int argc, char** argv)
 	ElbafFile file { input_filename };
 	file.set_probabilities();
 	auto& probability = file.get_probabilities();
+	auto symbol2 = symbol::huffman_code(probability);
 	auto symbol = symbol::unary_code(probability);
+	std::cout << "symbol table:\n\n";
+	file.display_symbols(symbol);
 
 	CodewordReader reader { symbol, input_filename };
 	auto output = std::ofstream{output_filename, std::ios_base::binary};
