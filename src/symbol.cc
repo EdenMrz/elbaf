@@ -1,6 +1,7 @@
 #include <vector>
 #include <list>
 #include <iostream>
+#include <bitset>
 #include <cassert>
 
 #include "symbol.h"
@@ -99,11 +100,20 @@ symbol_table huffman_code(prob_table& probability) {
 	symbol_table symbols;
 	std::vector<bool> path;
 	read_huffman_tree(root, symbols, path);
-	print_huffman_tree(root);
+	//print_huffman_tree(root);
 
 	free_huffman_tree(root);
 
 	return symbols;
+}
+
+reverse_symbol_table reverse_symbols(const symbol_table& symbols) {
+	reverse_symbol_table ret;
+
+	for (auto [ key, value ] : symbols)
+		ret[value] = key;
+
+	return ret;
 }
 
 HuffmanNode* build_huffman_tree(huffman_queue& prob_node) {
@@ -140,6 +150,28 @@ void free_huffman_tree(HuffmanNode* root) {
 	free_huffman_tree(root->left);
 	free_huffman_tree(root->right);
 	delete root;
+}
+
+bool is_set_bit(const uint8_t value, uint8_t bit_no) {
+	const uint8_t BYTE_LEN = 8;
+	uint8_t mask = 1 << (BYTE_LEN - 1 - bit_no);
+	return value & mask;
+}
+
+
+void display_reverse_symbols(reverse_symbol_table& symbol) {
+	for (const auto& [key, value]: symbol) {
+		std::cout << "0x";
+		for (auto bit: key) {
+			if (bit)
+				std::cout << '1';
+			else
+				std::cout << '0';
+		}
+		std::cout << ": " << std::bitset<8>(static_cast<uint8_t>(value));
+		std::cout << '\n';
+	}
+	std::cout << "The dictionary has " << symbol.size() << " symbols\n";
 }
 
 }

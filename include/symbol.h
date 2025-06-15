@@ -46,5 +46,11 @@ void free_huffman_tree(HuffmanNode* root);
 
 symbol_table unary_code(prob_table& probability);
 symbol_table huffman_code(prob_table& probability);
+reverse_symbol_table reverse_symbols(const symbol_table& symbols);
+
+// left-most bit no is 0, and right-most is 7
+bool is_set_bit(uint8_t value, const uint8_t bit_no);
+
+void display_reverse_symbols(reverse_symbol_table& symbols);
 
 }

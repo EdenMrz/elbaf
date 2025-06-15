@@ -7,6 +7,7 @@
 namespace elbaf {
 
 using symbol_table = std::map<std::byte, std::vector<bool>>;
+using reverse_symbol_table = std::map<std::vector<bool>, std::byte>;
 using prob_table = std::map<std::byte, double>;
 
 bool check_parameters(int argc, char** argv);
@@ -28,21 +29,43 @@ private:
 	prob_table _probability;
 };
 
-class CodewordReader {
+class GenericReader {
 public:
+	virtual std::optional<std::byte> next_byte() = 0;
+	const uint8_t BYTE_LEN = 8;
 	using bit_number = std::uint8_t;
+};
+
+class CodewordReader: public GenericReader {
+public:
 	CodewordReader(symbol_table& symbol);
 	CodewordReader(symbol_table& symbol, const char* filename);
 	std::byte next_byte(std::ifstream& input);
-	std::optional<std::byte> next_byte();
+	std::optional<std::byte> next_byte() override;
 private:
 	std::ifstream _input;
 	symbol_table& _symbol;
+	// bit number 0 is the left-most one
 	bit_number output_bit_no = 0;
 	bit_number input_bit_no = 0;
 	std::byte current_byte {0x0};
 };
 
-void write_to_file(std::ofstream& output, CodewordReader& reader);
+class ReverseCodewordReader: public GenericReader {
+public:
+	ReverseCodewordReader(reverse_symbol_table * const symbol);
+	ReverseCodewordReader(reverse_symbol_table * const symbol, const char* filename);
+	std::optional<std::byte> next_byte(std::ifstream& input);
+	std::optional<std::byte> next_byte() override;
+private:
+	std::ifstream _input;
+	reverse_symbol_table* const _reverse_symbol;
+	// bit number 0 is the left-most one
+	bit_number input_bit_no = 0;
+private:
+	void increment_bit_no();
+};
+
+void write_to_file(std::ofstream& output, GenericReader& reader);
 
 }

@@ -8,6 +8,7 @@
 #include <bitset>
 
 #include "elbaf.h"
+#include "symbol.h"
 
 using namespace std;
 
@@ -125,7 +126,6 @@ std::byte CodewordReader::next_byte(std::ifstream& input) {
 	if (!input.good())
 		return std::byte{0x0};
 
-	const uint8_t BYTE_LEN = 8;
 	char tmp;
 	input.get(tmp);
 	const std::vector<bool>* current = &this->_symbol[std::byte{static_cast<uint8_t>(tmp)}];
@@ -163,6 +163,56 @@ std::optional<std::byte> CodewordReader::next_byte() {
 	return make_optional(next_byte(_input));
 }
 
+ReverseCodewordReader::ReverseCodewordReader(reverse_symbol_table *const symbol):
+	_reverse_symbol{symbol}
+{}
+
+ReverseCodewordReader::ReverseCodewordReader(
+	reverse_symbol_table *const symbol, const char* filename):
+	_reverse_symbol {symbol},
+	_input{filename, std::ios_base::in | std::ios_base::binary}
+{}
+
+std::optional<std::byte> ReverseCodewordReader::next_byte(std::ifstream& input) {
+	if (!input.good())
+		return std::nullopt;
+
+	char tmp;
+	input.get(tmp);
+
+	std::vector<bool> current_symbol;
+	while(true) {
+		auto bool_val = symbol::is_set_bit(tmp, this->input_bit_no);
+		current_symbol.push_back(bool_val);
+		this->increment_bit_no();
+		if (this->input_bit_no > 0)
+			input.putback(tmp);
+
+		auto it = this->_reverse_symbol->find(current_symbol);
+		if (it != end(*this->_reverse_symbol))
+			return make_optional(it->second);
+
+		if (this->input_bit_no == 0) {
+			if (!input.good())
+				break;
+			input.get(tmp);
+		}
+	}
+
+	return std::nullopt;
+}
+
+std::optional<std::byte> ReverseCodewordReader::next_byte() {
+	if (!_input.good())
+		return std::nullopt;
+
+	return this->next_byte(this->_input);
+}
+
+void ReverseCodewordReader::increment_bit_no() {
+	this->input_bit_no = (this->input_bit_no + 1) % BYTE_LEN;
+}
+
 
 void ElbafFile::display_uncompressed_bytes() {
 	ifstream input { this->_filename, ios_base::binary };
@@ -198,7 +248,7 @@ void ElbafFile::display_compressed_bytes(symbol_table& symbol) {
 	std::cout << i << " bytes\n";
 }
 
-void write_to_file(std::ofstream& output, CodewordReader& reader) {
+void write_to_file(std::ofstream& output, GenericReader& reader) {
 	if (!output.good()) {
 		std::cout << "Cannot write to the file\n";
 		return;

@@ -17,8 +17,8 @@ int main(int argc, char** argv)
 	file.set_probabilities();
 	auto& probability = file.get_probabilities();
 	auto symbol2 = symbol::huffman_code(probability);
-	auto symbol = symbol::unary_code(probability);
-	std::cout << "symbol table:\n\n";
+	//auto symbol = symbol::unary_code(probability);
+	std::cout << "symbol table:\n";
 	file.display_symbols(symbol2);
 	//file.display_symbols(symbol);
 
@@ -27,6 +27,18 @@ int main(int argc, char** argv)
 
 	std::cout << "Writing compressed data to " << output_filename << '\n';
 	write_to_file(output, reader);
+	// close the file before reading it during decompression
+	output.close();
+
+	auto reverse_symbol2 = symbol::reverse_symbols(symbol2);
+	std::cout << '\n';
+	symbol::display_reverse_symbols(reverse_symbol2);
+	std::cout << '\n';
+	ReverseCodewordReader reverse_reader {&reverse_symbol2, output_filename};
+	auto reverse_output = std::ofstream{"original_file.txt", std::ios_base::binary};
+
+	std::cout << "Writing the initial data to original_file.txt\n";
+	write_to_file(reverse_output, reverse_reader);
 
 	return 0;
 }
