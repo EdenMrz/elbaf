@@ -42,15 +42,12 @@ huffman_queue probabilities_queue(prob_table& probability) {
 	// TODO: use a better algorithm - currently using a brute force approach
 	huffman_queue ret;
 
-	std::cout << "Probabilities: ";
 	for (const auto& [byte_value, prob]: probability) {
-		std::cout << prob << ", ";
 		ret.push(new HuffmanNode{
 			.probability = prob,
 			.symbol = byte_value,
 			.left = nullptr, .right = nullptr });
 	}
-	std::cout << '\n';
 
 	return ret;
 }
@@ -58,21 +55,16 @@ huffman_queue probabilities_queue(prob_table& probability) {
 void read_huffman_tree(HuffmanNode* node, symbol_table& probability, std::vector<bool>& path) {
 	assert(node != nullptr);
 
-	if (node->left == nullptr && node->right == nullptr) {
-		std::cout << "adding symbol for " << static_cast<int>(node->symbol) << '\n';
+	if (node->left == nullptr && node->right == nullptr)
 		probability[node->symbol] = path;
-		std::cout << "going back up, size = " << path.size() << '\n';
-	}
 
 	if (node->left) {
 		path.push_back(false);
-		std::cout << "going left\n";
 		read_huffman_tree(node->left, probability, path);
 	}
 
 	if (node->right) {
 		path.push_back(true);
-		std::cout << "going right\n";
 		read_huffman_tree(node->right, probability, path);
 	}
 
@@ -131,9 +123,6 @@ HuffmanNode* build_huffman_tree(huffman_queue& prob_node) {
 	prob_node.pop();
 
 	HuffmanNode* parent = new HuffmanNode{};
-	std::cout
-		<< "the 2 probabilities: " << lowest_prob_1->probability << ", "
-		<< lowest_prob_2->probability << '\n';
 	parent->probability = lowest_prob_1->probability + lowest_prob_2->probability;
 	parent->left = lowest_prob_1;
 	parent->right = lowest_prob_2;

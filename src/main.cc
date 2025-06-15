@@ -17,10 +17,9 @@ int main(int argc, char** argv)
 	file.set_probabilities();
 	auto& probability = file.get_probabilities();
 	auto symbol2 = symbol::huffman_code(probability);
-	//auto symbol = symbol::unary_code(probability);
 	std::cout << "symbol table:\n";
 	file.display_symbols(symbol2);
-	//file.display_symbols(symbol);
+	std::cout << '\n';
 
 	CodewordReader reader { symbol2, input_filename };
 	auto output = std::ofstream{output_filename, std::ios_base::binary};
@@ -31,9 +30,6 @@ int main(int argc, char** argv)
 	output.close();
 
 	auto reverse_symbol2 = symbol::reverse_symbols(symbol2);
-	std::cout << '\n';
-	symbol::display_reverse_symbols(reverse_symbol2);
-	std::cout << '\n';
 	ReverseCodewordReader reverse_reader {&reverse_symbol2, output_filename};
 	auto reverse_output = std::ofstream{"original_file.txt", std::ios_base::binary};
 
