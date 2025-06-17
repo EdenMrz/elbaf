@@ -73,21 +73,24 @@ void ElbafFile::set_probabilities() {
 		return;
 	}
 
-	double total = 0;
+	_size = 0;
 	char current;
+	std::cout << "Data: ";
 	while (input.get(current)) {
 		auto current_byte = static_cast<std::byte>(current);
 		if (this->_probability.count(current_byte) == 0)
 			this->_probability[current_byte] = 0;
 		this->_probability[current_byte]++;
-		total++;
+		std::cout << static_cast<int>(current_byte) << ' ';
+		_size++;
 	}
+	std::cout << '\n';
 
-	if (total == 0)
+	if (_size == 0)
 		return;
 
 	for (auto& [key, value]: this->_probability)
-		value = value * 100 / total;
+		value = value * 100 / _size;
 }
 
 void ElbafFile::display_probabilities() {
@@ -102,7 +105,8 @@ void ElbafFile::display_probabilities() {
 
 void ElbafFile::display_symbols(symbol_table& symbol) {
 	for (const auto& [key, value]: symbol) {
-		std::cout << std::bitset<8>(static_cast<uint8_t>(key));
+		auto i = static_cast<uint8_t>(key);
+		std::cout << std::bitset<8>(i) << '(' << static_cast<int>(i) << ')';
 		std::cout << ": 0x";
 		for (auto bit: value) {
 			if (bit)
@@ -174,43 +178,49 @@ ReverseCodewordReader::ReverseCodewordReader(
 {}
 
 std::optional<std::byte> ReverseCodewordReader::next_byte(std::ifstream& input) {
-	if (!input.good())
+	if (!input.good()) {
+		std::cout << "input is not good\n";
 		return std::nullopt;
+	}
 
 	char tmp;
 	input.get(tmp);
 
 	std::vector<bool> current_symbol;
 	while(true) {
-		auto bool_val = symbol::is_set_bit(tmp, this->input_bit_no);
+		auto bool_val = symbol::is_set_bit(tmp, this->_input_bit_no);
 		current_symbol.push_back(bool_val);
 		this->increment_bit_no();
-		if (this->input_bit_no > 0)
-			input.putback(tmp);
 
 		auto it = this->_reverse_symbol->find(current_symbol);
-		if (it != end(*this->_reverse_symbol))
+		if (it != end(*this->_reverse_symbol)) {
+			if (this->_input_bit_no > 0)
+				input.putback(tmp);
 			return make_optional(it->second);
+		}
 
-		if (this->input_bit_no == 0) {
+		if (this->_input_bit_no == 0) {
 			if (!input.good())
 				break;
 			input.get(tmp);
 		}
 	}
+	std::cout << "last symbol length: " << current_symbol.size() << '\n';
 
 	return std::nullopt;
 }
 
 std::optional<std::byte> ReverseCodewordReader::next_byte() {
+	/*
 	if (!_input.good())
 		return std::nullopt;
+	*/
 
 	return this->next_byte(this->_input);
 }
 
 void ReverseCodewordReader::increment_bit_no() {
-	this->input_bit_no = (this->input_bit_no + 1) % BYTE_LEN;
+	this->_input_bit_no = (this->_input_bit_no + 1) % BYTE_LEN;
 }
 
 
@@ -248,17 +258,19 @@ void ElbafFile::display_compressed_bytes(symbol_table& symbol) {
 	std::cout << i << " bytes\n";
 }
 
-void write_to_file(std::ofstream& output, GenericReader& reader) {
+void write_to_file(std::ofstream& output, GenericReader& reader, size_t size) {
 	if (!output.good()) {
 		std::cout << "Cannot write to the file\n";
 		return;
 	}
 
-	while (true) {
+	while (size) {
 		auto byte = reader.next_byte();
 		if (!byte)
 			break;
+
 		output << static_cast<char>(byte.value());
+		size--;
 	}
 }
 

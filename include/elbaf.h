@@ -21,12 +21,14 @@ public:
 	void display_compressed_bytes(symbol_table& symbol);
 	bool compress();
 	prob_table& get_probabilities();
+	size_t size() { return _size; }
 private:
 	void deltaCompress(std::ifstream& input, std::ofstream& output);
 	void deltaDecompress(std::ifstream& input, std::ofstream& output);
 private:
 	std::string _filename;
 	prob_table _probability;
+	size_t _size = 0;
 };
 
 class GenericReader {
@@ -61,11 +63,11 @@ private:
 	std::ifstream _input;
 	reverse_symbol_table* const _reverse_symbol;
 	// bit number 0 is the left-most one
-	bit_number input_bit_no = 0;
+	bit_number _input_bit_no = 0;
 private:
 	void increment_bit_no();
 };
 
-void write_to_file(std::ofstream& output, GenericReader& reader);
+void write_to_file(std::ofstream& output, GenericReader& reader, size_t size);
 
 }

@@ -15,26 +15,27 @@ int main(int argc, char** argv)
 
 	ElbafFile file { input_filename };
 	file.set_probabilities();
+	auto file_size = file.size();
 	auto& probability = file.get_probabilities();
-	auto symbol2 = symbol::huffman_code(probability);
+	auto symbol = symbol::huffman_code(probability);
 	std::cout << "symbol table:\n";
-	file.display_symbols(symbol2);
+	file.display_symbols(symbol);
 	std::cout << '\n';
 
-	CodewordReader reader { symbol2, input_filename };
+	CodewordReader reader { symbol, input_filename };
 	auto output = std::ofstream{output_filename, std::ios_base::binary};
 
 	std::cout << "Writing compressed data to " << output_filename << '\n';
-	write_to_file(output, reader);
+	write_to_file(output, reader, file_size);
 	// close the file before reading it during decompression
 	output.close();
 
-	auto reverse_symbol2 = symbol::reverse_symbols(symbol2);
-	ReverseCodewordReader reverse_reader {&reverse_symbol2, output_filename};
+	auto reverse_symbol = symbol::reverse_symbols(symbol);
+	ReverseCodewordReader reverse_reader {&reverse_symbol, output_filename};
 	auto reverse_output = std::ofstream{"original_file.txt", std::ios_base::binary};
 
 	std::cout << "Writing the initial data to original_file.txt\n";
-	write_to_file(reverse_output, reverse_reader);
+	write_to_file(reverse_output, reverse_reader, file_size);
 
 	return 0;
 }
