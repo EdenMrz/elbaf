@@ -31,6 +31,12 @@ private:
 	size_t _size = 0;
 };
 
+// state machine
+enum class HeaderState: char {
+	nb_bytes, dict_size, dict_key, dict_value, content
+};
+
+void next_state(HeaderState* state);
 class GenericReader {
 public:
 	virtual std::optional<std::byte> next_byte() = 0;
@@ -41,8 +47,8 @@ public:
 class CodewordReader: public GenericReader {
 public:
 	CodewordReader(symbol_table& symbol);
-	CodewordReader(symbol_table& symbol, const char* filename);
-	std::byte next_byte(std::ifstream& input);
+	CodewordReader(symbol_table& symbol, const char* filename, uint8_t nb_bytes);
+	std::optional<std::byte> next_byte(std::ifstream& input);
 	std::optional<std::byte> next_byte() override;
 private:
 	std::ifstream _input;
@@ -51,6 +57,11 @@ private:
 	bit_number output_bit_no = 0;
 	bit_number input_bit_no = 0;
 	std::byte current_byte {0x0};
+
+	// file header state
+	HeaderState _state = HeaderState::nb_bytes;
+	// NOTE: make nb_bytes fit in one byte for now
+	uint8_t _nb_bytes_left;
 };
 
 class ReverseCodewordReader: public GenericReader {
@@ -64,10 +75,13 @@ private:
 	reverse_symbol_table* const _reverse_symbol;
 	// bit number 0 is the left-most one
 	bit_number _input_bit_no = 0;
+
+	HeaderState _state = HeaderState::nb_bytes;
+	uint8_t _nb_bytes_left;
 private:
 	void increment_bit_no();
 };
 
-void write_to_file(std::ofstream& output, GenericReader& reader, size_t size);
+void write_to_file(std::ofstream& output, GenericReader& reader);
 
 }
