@@ -123,6 +123,9 @@ void ElbafFile::display_symbols(symbol_table& symbol) {
 void next_state(HeaderState* state) {
 	switch (*state) {
 	case HeaderState::nb_bytes:
+		*state = HeaderState::dict_size;
+		break;
+	case HeaderState::dict_size:
 		*state = HeaderState::content;
 		break;
 	default:
@@ -145,6 +148,11 @@ std::optional<std::byte> CodewordReader::next_byte(std::ifstream& input) {
 
 	if (_state == HeaderState::nb_bytes) {
 		std::byte ret{_nb_bytes_left};
+		next_state(&_state);
+		return ret;
+	} else if (_state == HeaderState::dict_size) {
+		// NOTE: assume the symbol size can fit in 1 byte for now
+		std::byte ret{_symbol.size()};
 		next_state(&_state);
 		return ret;
 	}
@@ -214,6 +222,11 @@ std::optional<std::byte> ReverseCodewordReader::next_byte(std::ifstream& input) 
 
 		assert(_nb_bytes_left > 0);
 
+		next_state(&_state);
+		return next_byte(input);
+	} else if (_state == HeaderState::dict_size) {
+		_symbol_size = tmp;
+		assert(_symbol_size > 0);
 		next_state(&_state);
 		return next_byte(input);
 	}

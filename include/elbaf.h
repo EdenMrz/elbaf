@@ -78,6 +78,7 @@ private:
 
 	HeaderState _state = HeaderState::nb_bytes;
 	uint8_t _nb_bytes_left;
+	uint8_t _symbol_size;
 private:
 	void increment_bit_no();
 };
