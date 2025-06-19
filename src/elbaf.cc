@@ -126,6 +126,9 @@ void next_state(HeaderState* state) {
 		*state = HeaderState::dict_size;
 		break;
 	case HeaderState::dict_size:
+		*state = HeaderState::dict_key;
+		break;
+	case HeaderState::dict_key:
 		*state = HeaderState::content;
 		break;
 	default:
@@ -146,15 +149,24 @@ std::optional<std::byte> CodewordReader::next_byte(std::ifstream& input) {
 	if (_nb_bytes_left == 0)
 		return std::nullopt;
 
+	std::byte ret;
 	if (_state == HeaderState::nb_bytes) {
-		std::byte ret{_nb_bytes_left};
+		ret = static_cast<std::byte>(_nb_bytes_left);
 		next_state(&_state);
 		return ret;
 	} else if (_state == HeaderState::dict_size) {
 		// NOTE: assume the symbol size can fit in 1 byte for now
-		std::byte ret{_symbol.size()};
+		ret = static_cast<std::byte>(_symbol.size());
 		next_state(&_state);
 		return ret;
+	} else if (_state == HeaderState::dict_key) {
+		for (auto& [key, value] : _symbol) {
+			ret = key;
+			break;
+		}
+		std::cout << "Writing dict key: " << static_cast<int>(ret) << '\n';
+		next_state(&_state);
+		return make_optional(ret);
 	}
 
 	if (!input.good())
@@ -178,7 +190,7 @@ std::optional<std::byte> CodewordReader::next_byte(std::ifstream& input) {
 		}
 	}
 
-	std::byte ret = this->current_byte;
+	ret = this->current_byte;
 	if (this->output_bit_no == BYTE_LEN) {
 		this->output_bit_no = 0;
 		this->current_byte = std::byte{0x0};
@@ -219,7 +231,6 @@ std::optional<std::byte> ReverseCodewordReader::next_byte(std::ifstream& input) 
 
 	if (_state == HeaderState::nb_bytes) {
 		_nb_bytes_left = tmp;
-
 		assert(_nb_bytes_left > 0);
 
 		next_state(&_state);
@@ -227,6 +238,12 @@ std::optional<std::byte> ReverseCodewordReader::next_byte(std::ifstream& input) 
 	} else if (_state == HeaderState::dict_size) {
 		_symbol_size = tmp;
 		assert(_symbol_size > 0);
+		next_state(&_state);
+		return next_byte(input);
+	} else if (_state == HeaderState::dict_key) {
+		auto key = static_cast<std::byte>(tmp);
+		std::cout << "key = " << static_cast<int>(key) << '\n';
+		// ... do something with the key
 		next_state(&_state);
 		return next_byte(input);
 	}

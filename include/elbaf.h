@@ -37,6 +37,7 @@ enum class HeaderState: char {
 };
 
 void next_state(HeaderState* state);
+
 class GenericReader {
 public:
 	virtual std::optional<std::byte> next_byte() = 0;
