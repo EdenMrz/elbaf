@@ -34,7 +34,7 @@ private:
 
 // state machine
 enum class HeaderState: char {
-	nb_bytes, dict_key, dict_value, content
+	nb_bytes, dict_key, dict_key_len, dict_value, content
 };
 
 void next_state(HeaderState* state);
@@ -79,6 +79,7 @@ private:
 	std::ifstream _input;
 	reverse_symbol_table* const _reverse_symbol;
 	symbol_list _symbol_list;
+	size_t _symbol_index = 0;
 	// bit number 0 is the left-most one
 	bit_number _input_bit_no = 0;
 

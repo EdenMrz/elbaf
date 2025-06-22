@@ -127,6 +127,9 @@ void next_state(HeaderState* state) {
 		*state = HeaderState::dict_key;
 		break;
 	case HeaderState::dict_key:
+		*state = HeaderState::dict_key_len;
+		break;
+	case HeaderState::dict_key_len:
 		*state = HeaderState::dict_value;
 		break;
 	case HeaderState::dict_value:
@@ -164,15 +167,28 @@ std::optional<std::byte> CodewordReader::next_byte(std::ifstream& input) {
 			_symbol_list = get_symbols_list(_symbol);
 
 		if (_symbol_index == _symbol_list.size()) {
-			// Put the previous byte again. This is how the decompressor
+			// Put the previous byte key again. This is how the decompressor
 			// will detect the end of the dict_key part
 			ret = _symbol_list[_symbol_index-1].first;
 			next_state(&_state);
+			_symbol_index = 0;
 		} else {
 			ret = _symbol_list[_symbol_index].first;
 			_symbol_index++;
 		}
 
+		return make_optional(ret);
+	} else if (_state == HeaderState::dict_key_len) {
+		if (_symbol_index == _symbol_list.size()) {
+			next_state(&_state);
+			_symbol_index = 0;
+			return next_byte(input);
+		}
+
+		const auto& tmp = _symbol_list[_symbol_index].second;
+		_symbol_index++;
+		ret = static_cast<std::byte>(tmp.size());
+		std::cout << "size = " << static_cast<int>(ret) << '\n';
 		return make_optional(ret);
 	}
 
@@ -252,6 +268,16 @@ std::optional<std::byte> ReverseCodewordReader::next_byte(std::ifstream& input) 
 			_symbol_list.push_back(std::make_pair(key, std::vector<bool>{}));
 
 		_prev_byte_key = key;
+		return next_byte(input);
+	} else if (_state == HeaderState::dict_key_len) {
+		auto& current_bits = _symbol_list[_symbol_index].second;
+		current_bits.resize(static_cast<size_t>(tmp));
+
+		_symbol_index++;
+		if (_symbol_index == _symbol_list.size()) {
+			next_state(&_state);
+			_symbol_index = 0;
+		}
 
 		return next_byte(input);
 	}
