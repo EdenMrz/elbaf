@@ -33,7 +33,7 @@ private:
 
 // state machine
 enum class HeaderState: char {
-	nb_bytes, dict_size, dict_key, dict_value, content
+	nb_bytes, dict_key, dict_value, content
 };
 
 void next_state(HeaderState* state);
@@ -79,7 +79,6 @@ private:
 
 	HeaderState _state = HeaderState::nb_bytes;
 	uint8_t _nb_bytes_left;
-	uint8_t _symbol_size;
 private:
 	void increment_bit_no();
 };
