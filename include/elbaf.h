@@ -7,6 +7,7 @@
 namespace elbaf {
 
 using symbol_table = std::map<std::byte, std::vector<bool>>;
+using symbol_list = std::vector<std::pair<std::byte, std::vector<bool>>>;
 using reverse_symbol_table = std::map<std::vector<bool>, std::byte>;
 using prob_table = std::map<std::byte, double>;
 
@@ -37,6 +38,7 @@ enum class HeaderState: char {
 };
 
 void next_state(HeaderState* state);
+symbol_list get_symbols_list(symbol_table& symbol);
 
 class GenericReader {
 public:
@@ -61,24 +63,28 @@ private:
 
 	// file header state
 	HeaderState _state = HeaderState::nb_bytes;
+	symbol_list _symbol_list;
+	size_t _symbol_index = 0;
 	// NOTE: make nb_bytes fit in one byte for now
 	uint8_t _nb_bytes_left;
 };
 
 class ReverseCodewordReader: public GenericReader {
 public:
-	ReverseCodewordReader(reverse_symbol_table * const symbol);
-	ReverseCodewordReader(reverse_symbol_table * const symbol, const char* filename);
+	ReverseCodewordReader(reverse_symbol_table* const symbol);
+	ReverseCodewordReader(reverse_symbol_table* const symbol, const char* filename);
 	std::optional<std::byte> next_byte(std::ifstream& input);
 	std::optional<std::byte> next_byte() override;
 private:
 	std::ifstream _input;
 	reverse_symbol_table* const _reverse_symbol;
+	symbol_list _symbol_list;
 	// bit number 0 is the left-most one
 	bit_number _input_bit_no = 0;
 
 	HeaderState _state = HeaderState::nb_bytes;
 	uint8_t _nb_bytes_left;
+	std::byte _prev_byte_key;
 private:
 	void increment_bit_no();
 };

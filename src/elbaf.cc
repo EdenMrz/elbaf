@@ -3,6 +3,7 @@
 #include <optional>
 #include <string>
 #include <iomanip>
+#include <utility>
 #include <vector>
 #include <cstddef>
 #include <bitset>
@@ -126,12 +127,19 @@ void next_state(HeaderState* state) {
 		*state = HeaderState::dict_key;
 		break;
 	case HeaderState::dict_key:
+		*state = HeaderState::dict_value;
+		break;
+	case HeaderState::dict_value:
 		*state = HeaderState::content;
 		break;
 	default:
 		*state = HeaderState::content;
 		break;
 	}
+}
+
+symbol_list get_symbols_list(symbol_table& symbol) {
+	return {symbol.begin(), symbol.end()};
 }
 
 CodewordReader::CodewordReader(symbol_table& symbol)
@@ -152,12 +160,19 @@ std::optional<std::byte> CodewordReader::next_byte(std::ifstream& input) {
 		next_state(&_state);
 		return ret;
 	} else if (_state == HeaderState::dict_key) {
-		for (auto& [key, value] : _symbol) {
-			ret = key;
-			break;
+		if (_symbol_list.size() == 0)
+			_symbol_list = get_symbols_list(_symbol);
+
+		if (_symbol_index == _symbol_list.size()) {
+			// Put the previous byte again. This is how the decompressor
+			// will detect the end of the dict_key part
+			ret = _symbol_list[_symbol_index-1].first;
+			next_state(&_state);
+		} else {
+			ret = _symbol_list[_symbol_index].first;
+			_symbol_index++;
 		}
-		std::cout << "Writing dict key: " << static_cast<int>(ret) << '\n';
-		next_state(&_state);
+
 		return make_optional(ret);
 	}
 
@@ -230,8 +245,14 @@ std::optional<std::byte> ReverseCodewordReader::next_byte(std::ifstream& input) 
 	} else if (_state == HeaderState::dict_key) {
 		auto key = static_cast<std::byte>(tmp);
 		std::cout << "key = " << static_cast<int>(key) << '\n';
-		// ... do something with the key
-		next_state(&_state);
+
+		if (_prev_byte_key == key && _symbol_list.size() > 0)
+			next_state(&_state);
+		else
+			_symbol_list.push_back(std::make_pair(key, std::vector<bool>{}));
+
+		_prev_byte_key = key;
+
 		return next_byte(input);
 	}
 
