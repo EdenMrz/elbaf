@@ -11,7 +11,13 @@ using symbol_list = std::vector<std::pair<std::byte, std::vector<bool>>>;
 using reverse_symbol_table = std::map<std::vector<bool>, std::byte>;
 using prob_table = std::map<std::byte, double>;
 
-bool check_parameters(int argc, char** argv);
+struct options {
+	bool compression = true;
+	const char* input_file = nullptr;
+	const char* output_file = nullptr;
+};
+
+bool check_parameters(int argc, char** argv, options* opt);
 class ElbafFile {
 public:
 	ElbafFile(const char* filename);

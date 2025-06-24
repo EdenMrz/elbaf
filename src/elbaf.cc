@@ -1,4 +1,5 @@
 #include <cstdint>
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <optional>
@@ -17,12 +18,25 @@ using namespace std;
 
 namespace elbaf {
 
-bool check_parameters(int argc, char** argv) {
-	if (argc == 3) {
-		return true;
+bool check_parameters(int argc, char** argv, options* opts) {
+	for (int i = 1; i < argc && (argc == 3 || argc == 4); i++) {
+		if (strcmp(argv[i], "-x") == 0)
+			opts->compression = false;
+		else if (opts->input_file == nullptr)
+			opts->input_file = argv[i];
+		else
+			opts->output_file = argv[i];
 	}
 
-	std::cout << "Usage: elbaf inputfile outputfile\n";
+	if (opts->input_file != nullptr && opts->output_file != nullptr)
+		return true;
+
+	std::cout
+		<< "Usage:\n"
+		<< "  elbaf [options] inputfile outputfile\n\n"
+		<< "Options:\n"
+		<< "  -x: decompression\n"
+		<< '\n';
 
 	return false;
 }
