@@ -71,13 +71,13 @@ private:
 
 class ReverseCodewordReader: public GenericReader {
 public:
-	ReverseCodewordReader(reverse_symbol_table* const symbol);
-	ReverseCodewordReader(reverse_symbol_table* const symbol, const char* filename);
+	ReverseCodewordReader();
+	ReverseCodewordReader(const char* filename);
 	std::optional<std::byte> next_byte(std::ifstream& input);
 	std::optional<std::byte> next_byte() override;
 private:
 	std::ifstream _input;
-	reverse_symbol_table* const _reverse_symbol;
+	reverse_symbol_table _reverse_symbol;
 	symbol_list _symbol_list;
 	size_t _symbol_index = 0;
 	// bit number 0 is the left-most one
@@ -90,6 +90,7 @@ private:
 private:
 	void increment_bit_no();
 	void reset_read_states();
+	void generate_symbols_map();
 };
 
 void write_to_file(std::ofstream& output, GenericReader& reader);

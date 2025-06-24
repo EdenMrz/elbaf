@@ -264,13 +264,10 @@ std::optional<std::byte> CodewordReader::next_byte() {
 	return next_byte(_input);
 }
 
-ReverseCodewordReader::ReverseCodewordReader(reverse_symbol_table *const symbol):
-	_reverse_symbol{symbol}
+ReverseCodewordReader::ReverseCodewordReader()
 {}
 
-ReverseCodewordReader::ReverseCodewordReader(
-	reverse_symbol_table *const symbol, const char* filename):
-	_reverse_symbol {symbol},
+ReverseCodewordReader::ReverseCodewordReader(const char* filename):
 	_input{filename, std::ios_base::in | std::ios_base::binary}
 {}
 
@@ -278,6 +275,11 @@ void ReverseCodewordReader::reset_read_states() {
 	_output_bit_no = 0;
 	_input_bit_no = 0;
 	_symbol_index = 0;
+}
+
+void ReverseCodewordReader::generate_symbols_map() {
+	for (const auto& [key, value]: _symbol_list)
+		_reverse_symbol[value] = key;
 }
 
 std::optional<std::byte> ReverseCodewordReader::next_byte(std::ifstream& input) {
@@ -347,6 +349,7 @@ std::optional<std::byte> ReverseCodewordReader::next_byte(std::ifstream& input) 
 		// all symbols have been read
 		if (_symbol_index == _symbol_list.size()) {
 			reset_read_states();
+			generate_symbols_map();
 
 			// TODO: generate the symbols map from _symbol_list
 			// ...
@@ -363,8 +366,8 @@ std::optional<std::byte> ReverseCodewordReader::next_byte(std::ifstream& input) 
 		current_symbol.push_back(bool_val);
 		this->increment_bit_no();
 
-		auto it = this->_reverse_symbol->find(current_symbol);
-		if (it != end(*this->_reverse_symbol)) {
+		auto it = this->_reverse_symbol.find(current_symbol);
+		if (it != end(this->_reverse_symbol)) {
 			if (this->_input_bit_no > 0)
 				input.putback(tmp);
 			_nb_bytes_left--;

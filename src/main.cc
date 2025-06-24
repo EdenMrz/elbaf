@@ -30,8 +30,8 @@ int main(int argc, char** argv)
 	// close the file before reading it during decompression
 	output.close();
 
-	auto reverse_symbol = symbol::reverse_symbols(symbol);
-	ReverseCodewordReader reverse_reader {&reverse_symbol, output_filename };
+	//auto reverse_symbol = symbol::reverse_symbols(symbol);
+	ReverseCodewordReader reverse_reader {output_filename };
 	auto reverse_output = std::ofstream{"original_file.txt", std::ios_base::binary};
 
 	std::cout << "Writing the initial data to original_file.txt\n";
