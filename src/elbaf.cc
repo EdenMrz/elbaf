@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <fstream>
 #include <iostream>
 #include <optional>
@@ -188,7 +189,40 @@ std::optional<std::byte> CodewordReader::next_byte(std::ifstream& input) {
 		const auto& tmp = _symbol_list[_symbol_index].second;
 		_symbol_index++;
 		ret = static_cast<std::byte>(tmp.size());
-		std::cout << "size = " << static_cast<int>(ret) << '\n';
+		return make_optional(ret);
+	} else if (_state == HeaderState::dict_value) {
+		std::vector<bool> bits;
+		bits.reserve(BYTE_LEN);
+		size_t index = 0;
+
+		const std::vector<bool>* current_bits = nullptr;
+		while (bits.size() < BYTE_LEN && _symbol_index < _symbol_list.size()) {
+			current_bits = &(_symbol_list[_symbol_index].second);
+			bits.push_back((*current_bits)[input_bit_no]);
+
+			input_bit_no++;
+			input_bit_no %= current_bits->size();
+			if (input_bit_no == 0)
+				_symbol_index++;
+		}
+
+		// fill the remaining bits with dummy value
+		while (_symbol_index == _symbol_list.size() && bits.size() < BYTE_LEN)
+			bits.push_back(false);
+
+		// convert bits to std::byte
+		ret = std::byte{0};
+		for (const auto& bit : bits) {
+			std::byte mask { static_cast<uint8_t>(bit) };
+			ret = (ret << 1) | mask;
+		}
+
+		if (_symbol_index == _symbol_list.size()) {
+			output_bit_no = 0;
+			input_bit_no = 0;
+			next_state(&_state);
+		}
+
 		return make_optional(ret);
 	}
 
@@ -240,6 +274,12 @@ ReverseCodewordReader::ReverseCodewordReader(
 	_input{filename, std::ios_base::in | std::ios_base::binary}
 {}
 
+void ReverseCodewordReader::reset_read_states() {
+	_output_bit_no = 0;
+	_input_bit_no = 0;
+	_symbol_index = 0;
+}
+
 std::optional<std::byte> ReverseCodewordReader::next_byte(std::ifstream& input) {
 	if (_nb_bytes_left == 0 && _state != HeaderState::nb_bytes)
 		return std::nullopt;
@@ -260,7 +300,6 @@ std::optional<std::byte> ReverseCodewordReader::next_byte(std::ifstream& input) 
 		return next_byte(input);
 	} else if (_state == HeaderState::dict_key) {
 		auto key = static_cast<std::byte>(tmp);
-		std::cout << "key = " << static_cast<int>(key) << '\n';
 
 		if (_prev_byte_key == key && _symbol_list.size() > 0)
 			next_state(&_state);
@@ -277,6 +316,42 @@ std::optional<std::byte> ReverseCodewordReader::next_byte(std::ifstream& input) 
 		if (_symbol_index == _symbol_list.size()) {
 			next_state(&_state);
 			_symbol_index = 0;
+		}
+
+		return next_byte(input);
+	} else if (_state == HeaderState::dict_value) {
+		std::vector<bool>* symbol = nullptr;
+		while (_input_bit_no < BYTE_LEN && _symbol_index < _symbol_list.size()) {
+			symbol = &(_symbol_list[_symbol_index].second);
+
+			// get bit value at _input_bit_no
+			std::byte tmp_byte {static_cast<uint8_t>(tmp)};
+			auto shift = BYTE_LEN - 1 - _input_bit_no;
+			tmp_byte >>= shift;
+			_input_bit_no++;
+			bool bit_value = false;
+			if (( tmp_byte & std::byte{0x1} ) != std::byte{0x0})
+				bit_value = true;
+
+			(*symbol)[_output_bit_no] = bit_value;
+
+			_output_bit_no++;
+			if (_output_bit_no == symbol->size()) {
+				_output_bit_no = 0;
+				_symbol_index++;
+			}
+		}
+
+		_input_bit_no = 0;
+
+		// all symbols have been read
+		if (_symbol_index == _symbol_list.size()) {
+			reset_read_states();
+
+			// TODO: generate the symbols map from _symbol_list
+			// ...
+
+			next_state(&_state);
 		}
 
 		return next_byte(input);

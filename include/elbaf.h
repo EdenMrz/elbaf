@@ -81,6 +81,7 @@ private:
 	symbol_list _symbol_list;
 	size_t _symbol_index = 0;
 	// bit number 0 is the left-most one
+	bit_number _output_bit_no = 0;
 	bit_number _input_bit_no = 0;
 
 	HeaderState _state = HeaderState::nb_bytes;
@@ -88,6 +89,7 @@ private:
 	std::byte _prev_byte_key;
 private:
 	void increment_bit_no();
+	void reset_read_states();
 };
 
 void write_to_file(std::ofstream& output, GenericReader& reader);
