@@ -1,5 +1,5 @@
 # ELBAF
-**elbaf** is command line tool for compressing/decompressing files. It currently uses Huffman encoding as its compression algorithm - other algorithms will be implemented in the future.
+**elbaf** is a command line tool for compressing/decompressing files. It currently uses Huffman encoding as its compression algorithm - other algorithms will be implemented in the future.
 
 Usage:
 ```
@@ -10,7 +10,7 @@ Options:
 ```
 
 ### Compiling
-Requirements: CMake, C++20 compiler
+Requirements: CMake, C++20 compiler, build tool (make, clang, ...)
 ```
 mkdir build
 cmake -B build .
