@@ -163,7 +163,7 @@ symbol_list get_symbols_list(symbol_table& symbol) {
 CodewordReader::CodewordReader(symbol_table& symbol)
 	: _symbol{symbol}
 {}
-CodewordReader::CodewordReader(symbol_table& symbol, const char* filename, uint8_t nb_bytes)
+CodewordReader::CodewordReader(symbol_table& symbol, const char* filename, size_t nb_bytes)
 	: _input{filename, std::ios_base::out | std::ios_base::binary}, _symbol{symbol},
 	_nb_bytes_left{nb_bytes}
 {}
@@ -174,6 +174,7 @@ std::optional<std::byte> CodewordReader::next_byte(std::ifstream& input) {
 
 	std::byte ret;
 	if (_state == HeaderState::nb_bytes) {
+		// BUG: narrowing happening here if _nb_bytes_left does not fit in a single byte
 		ret = static_cast<std::byte>(_nb_bytes_left);
 		next_state(&_state);
 		return ret;
@@ -309,6 +310,7 @@ std::optional<std::byte> ReverseCodewordReader::next_byte(std::ifstream& input) 
 	input.get(tmp);
 
 	if (_state == HeaderState::nb_bytes) {
+		// BUG: assumes the number of bytes fits in a single byte
 		_nb_bytes_left = tmp;
 		assert(_nb_bytes_left > 0);
 

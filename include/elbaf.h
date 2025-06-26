@@ -56,7 +56,7 @@ public:
 class CodewordReader: public GenericReader {
 public:
 	CodewordReader(symbol_table& symbol);
-	CodewordReader(symbol_table& symbol, const char* filename, uint8_t nb_bytes);
+	CodewordReader(symbol_table& symbol, const char* filename, size_t nb_bytes);
 	std::optional<std::byte> next_byte(std::ifstream& input);
 	std::optional<std::byte> next_byte() override;
 private:
@@ -72,7 +72,7 @@ private:
 	symbol_list _symbol_list;
 	size_t _symbol_index = 0;
 	// NOTE: make nb_bytes fit in one byte for now
-	uint8_t _nb_bytes_left;
+	size_t _nb_bytes_left;
 };
 
 class ReverseCodewordReader: public GenericReader {
@@ -91,7 +91,7 @@ private:
 	bit_number _input_bit_no = 0;
 
 	HeaderState _state = HeaderState::nb_bytes;
-	uint8_t _nb_bytes_left;
+	size_t _nb_bytes_left;
 	std::byte _prev_byte_key;
 private:
 	void increment_bit_no();
