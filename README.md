@@ -11,7 +11,7 @@ Options:
 
 
 ### Compiling
-Requirements: CMake, C++20 compiler, build tool (make, clang, ...)
+Requirements: CMake, C++20 compiler, build tool (make, ninja, ...)
 ```
 mkdir build
 cmake -B build .
