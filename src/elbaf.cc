@@ -2,6 +2,7 @@
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <optional>
 #include <string>
 #include <iomanip>
@@ -166,7 +167,9 @@ CodewordReader::CodewordReader(symbol_table& symbol)
 CodewordReader::CodewordReader(symbol_table& symbol, const char* filename, size_t nb_bytes)
 	: _input{filename, std::ios_base::out | std::ios_base::binary}, _symbol{symbol},
 	_nb_bytes_left{nb_bytes}
-{}
+{
+	assert(_nb_bytes_left <= std::numeric_limits<uint8_t>::max());
+}
 
 std::optional<std::byte> CodewordReader::next_byte(std::ifstream& input) {
 	if (_nb_bytes_left == 0)
@@ -311,7 +314,9 @@ std::optional<std::byte> ReverseCodewordReader::next_byte(std::ifstream& input) 
 
 	if (_state == HeaderState::nb_bytes) {
 		// BUG: assumes the number of bytes fits in a single byte
-		_nb_bytes_left = tmp;
+
+		// conversion to unsigned char is needed here to avoid sign extension
+		_nb_bytes_left = static_cast<unsigned char>(tmp);
 		assert(_nb_bytes_left > 0);
 
 		next_state(&_state);

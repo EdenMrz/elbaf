@@ -9,6 +9,7 @@ Options:
   -x : decompression
 ```
 
+
 ### Compiling
 Requirements: CMake, C++20 compiler, build tool (make, clang, ...)
 ```
@@ -18,3 +19,7 @@ cmake --build build
 ```
 
 **elbaf** will by default appear under ```build/bin/elbaf```
+
+
+### Limitations
+The file to be compressed has to be 255 bytes maximum. This is due to the fact that the header in the compressed file stores the file size in one byte.
