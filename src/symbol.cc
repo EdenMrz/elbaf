@@ -3,6 +3,7 @@
 #include <iostream>
 #include <bitset>
 #include <cassert>
+#include <cstdint>
 
 #include "symbol.h"
 
@@ -141,9 +142,9 @@ void free_huffman_tree(HuffmanNode* root) {
 	delete root;
 }
 
-bool is_set_bit(const uint8_t value, uint8_t bit_no) {
-	const uint8_t BYTE_LEN = 8;
-	uint8_t mask = 1 << (BYTE_LEN - 1 - bit_no);
+bool is_set_bit(const std::uint8_t value, std::uint8_t bit_no) {
+	const std::uint8_t BYTE_LEN = 8;
+	std::uint8_t mask = 1 << (BYTE_LEN - 1 - bit_no);
 	return value & mask;
 }
 
@@ -157,7 +158,7 @@ void display_reverse_symbols(reverse_symbol_table& symbol) {
 			else
 				std::cout << '0';
 		}
-		std::cout << ": " << std::bitset<8>(static_cast<uint8_t>(value));
+		std::cout << ": " << std::bitset<8>(static_cast<std::uint8_t>(value));
 		std::cout << '\n';
 	}
 	std::cout << "The dictionary has " << symbol.size() << " symbols\n";

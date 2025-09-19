@@ -3,6 +3,7 @@
 #include <vector>
 #include <fstream>
 #include <optional>
+#include <cstdint>
 
 namespace elbaf {
 
@@ -49,7 +50,7 @@ symbol_list get_symbols_list(symbol_table& symbol);
 class GenericReader {
 public:
 	virtual std::optional<std::byte> next_byte() = 0;
-	const uint8_t BYTE_LEN = 8;
+	const std::uint8_t BYTE_LEN = 8;
 	using bit_number = std::uint8_t;
 };
 
