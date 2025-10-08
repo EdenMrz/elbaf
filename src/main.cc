@@ -81,7 +81,7 @@ private:
 	filezone _zone = filezone::HEADER_SIZE; 
 	std::int8_t _code_number = 0;
 	std::byte _current_byte;
-	std::int8_t _bit_number = 0;
+	std::int8_t _bit_number = 8;
 
 	static const std::int8_t BIT_LEN = 8;
 };
@@ -130,14 +130,15 @@ std::optional<std::byte> Compressor::next(std::istream& input) {
 	while (true) {
 		_current_byte <<= 1;
 		// BUG: the length of the longest (ie rarest) symbol should be len-1 but with the last bit set to 1
+		std::byte mask = std::byte{0x1} << (_bit_number-1);
 		if (len == 1)
-			_current_byte &= std::byte{0b11111110};
+			_current_byte &= ~mask;
 		else
-			_current_byte |= std::byte{0b00000001};
+			_current_byte |= mask;
 
-		++_bit_number;
-		if (_bit_number == Compressor::BIT_LEN) {
-			_bit_number = 0;
+		--_bit_number;
+		if (_bit_number == 0) {
+			_bit_number = Compressor::BIT_LEN;
 			break;
 		}
 
