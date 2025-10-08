@@ -65,6 +65,7 @@ symbol_queue<> generate_priority_queue(code_symbol& symbols) {
 enum class filezone: std::int8_t {
 	HEADER_SIZE,
 	HEADER_CODES,
+	DATA_SIZE,
 	DATA
 };
 
@@ -117,7 +118,11 @@ std::optional<std::byte> Compressor::next(std::istream& input) {
 			_queue.pop();
 			return tmp;
 		}
+		_zone = filezone::DATA_SIZE;
+	case filezone::DATA_SIZE:
 		_zone = filezone::DATA;
+		// NOTE: set to a static value for now
+		return std::byte{3};
 	default:
 		// Do the rest of this function
 		break;
