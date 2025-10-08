@@ -25,7 +25,10 @@ public:
 	}
 };
 
-code_symbol generate_symbols(std::istream& input, Encoding encoding = Encoding::HUFFMAN) {
+template <typename Compare = frequency_compare>
+using symbol_queue = std::priority_queue<freq_entry, std::vector<freq_entry>, Compare>;
+
+symbol_queue<> generate_symbols(std::istream& input, Encoding encoding = Encoding::HUFFMAN) {
 	std::map<char, size_t> freq{};
 	char c;
 	size_t total = 0;
@@ -39,46 +42,87 @@ code_symbol generate_symbols(std::istream& input, Encoding encoding = Encoding::
 	}
 
 	// NOTE: (1)
-	// Do not use decltype(freq)::value_type as the map key will be set to const.
+	// Do not use decltype(freq)::value_type as the queue data type or else the map key will use
+	// a const type.
 	// Making the key const will later create an error when pushing values to the priority_queue.
 	// This is because when pushing, a priority_queue will first push_back(), then move/assign
 	// some elements to keep the container sorted in some way.
 	// That move/assign operation is not allowed if one of the std::pair parameters is const.
-	std::priority_queue<freq_entry, std::vector<freq_entry>, frequency_compare> symbols_queue;
-	for (const auto f: freq) {
+	symbol_queue symbols_queue;
+	for (const auto f: freq)
 		symbols_queue.push(f);
-	}
 
-	std::map<char, size_t> symbols;
-	size_t i = 0;
-	while (!symbols_queue.empty()) {
-		const auto& tmp = symbols_queue.top();
-		symbols.insert(std::make_pair(tmp.first, ++i));
-		symbols_queue.pop();
-	}
-
-	return symbols;
+	return symbols_queue;
 }
+
+symbol_queue<> generate_priority_queue(code_symbol& symbols) {
+	symbol_queue q{};
+	for (const auto& s: symbols)
+		q.push(s);
+	return q;
+}
+
+enum class filezone: std::int8_t {
+	HEADER_SIZE,
+	HEADER_CODES,
+	DATA
+};
 
 class Compressor {
 public:
-	Compressor(code_symbol& symbols);
-	Compressor(code_symbol&& symbols);
+	Compressor(symbol_queue<>& symbols);
+	Compressor(symbol_queue<>&& symbols);
 	std::optional<std::byte> next(std::istream& input);
 private:
+	void generate_symbols();
+private:
 	code_symbol _symbols;
+	symbol_queue<> _queue;
+	filezone _zone = filezone::HEADER_SIZE; 
+	std::int8_t _code_number = 0;
 	std::byte _current_byte;
 	std::int8_t _bit_number = 0;
 
 	static const std::int8_t BIT_LEN = 8;
 };
 
-Compressor::Compressor(code_symbol& symbols): _symbols{symbols} {}
-Compressor::Compressor(code_symbol&& symbols): _symbols{symbols} {}
+Compressor::Compressor(symbol_queue<>& queue): _queue{queue} {
+	generate_symbols();
+}
+Compressor::Compressor(symbol_queue<>&& queue): _queue{queue} {
+	generate_symbols();
+}
+void Compressor::generate_symbols() {
+	size_t i = 0;
+	auto queue = _queue;
+	while (!queue.empty()) {
+		const auto& tmp = queue.top();
+		_symbols.insert(std::make_pair(tmp.first, ++i));
+		queue.pop();
+	}
+}
 
 std::optional<std::byte> Compressor::next(std::istream& input) {
 	std::optional<std::byte> opt;
 	char c;
+
+	switch (_zone) {
+	case filezone::HEADER_SIZE:
+		_zone = filezone::HEADER_CODES;
+		return std::byte{static_cast<unsigned char>(_symbols.size())};
+	case filezone::HEADER_CODES:
+		while (_code_number < _symbols.size()) {
+			++_code_number;
+			std::byte tmp { static_cast<unsigned char>(_queue.top().first) };
+			_queue.pop();
+			return tmp;
+		}
+		_zone = filezone::DATA;
+	default:
+		// Do the rest of this function
+		break;
+	}
+
 	if (!input.get(c))
 		return opt;
 	size_t len = _symbols[c];
