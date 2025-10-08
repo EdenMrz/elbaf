@@ -11,6 +11,7 @@
 #include <cstddef>
 #include <bitset>
 #include <cassert>
+#include <filesystem>
 
 #include "elbaf.h"
 #include "symbol.h"
@@ -18,6 +19,15 @@
 using namespace std;
 
 namespace elbaf {
+
+void print_usage() {
+	std::cout
+		<< "Usage:\n"
+		<< "  elbaf [options] inputfile outputfile\n\n"
+		<< "Options:\n"
+		<< "  -x: decompression\n"
+		<< '\n';
+}
 
 bool check_parameters(int argc, char** argv, options* opts) {
 	for (int i = 1; i < argc && (argc == 3 || argc == 4); i++) {
@@ -29,17 +39,17 @@ bool check_parameters(int argc, char** argv, options* opts) {
 			opts->output_file = argv[i];
 	}
 
-	if (opts->input_file != nullptr && opts->output_file != nullptr)
-		return true;
+	if (opts->input_file == nullptr || opts->output_file == nullptr) {
+		print_usage();
+		return false;
+	}
 
-	std::cout
-		<< "Usage:\n"
-		<< "  elbaf [options] inputfile outputfile\n\n"
-		<< "Options:\n"
-		<< "  -x: decompression\n"
-		<< '\n';
+	if (!std::filesystem::exists(opts->input_file)) {
+		std::cout << opts->input_file << " does not exist\n";
+		return false;
+	}
 
-	return false;
+	return true;
 }
 
 ElbafFile::ElbafFile(const char *filename):
