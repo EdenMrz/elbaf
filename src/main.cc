@@ -1,12 +1,10 @@
 #include <iostream>
-#include <bitset>
 #include <fstream>
 #include <map>
 #include <queue>
 #include <cstddef>
 #include <sys/types.h>
 #include "elbaf.h"
-#include "symbol.h"
 
 using namespace elbaf;
 
@@ -262,18 +260,10 @@ int main(int argc, char** argv)
 	if (!check_parameters(argc, argv, &opts))
 		return -1;
 
-	auto output = std::ofstream{opts.output_file, std::ios_base::binary};
-
-	if (opts.compression) {
+	if (opts.compression)
 		compress(opts);
-	} else {
+	else
 		decompress(opts);
-		/*
-		ReverseCodewordReader reader { opts.input_file };
-		std::cout << "Writing the initial data to " << opts.output_file << '\n';
-		write_to_file(output, reader);
-		*/
-	}
 
 	return 0;
 }
