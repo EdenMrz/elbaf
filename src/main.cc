@@ -1,4 +1,5 @@
 #include <iostream>
+#include <bitset>
 #include <fstream>
 #include <map>
 #include <queue>
@@ -14,6 +15,7 @@ enum class Encoding {
 };
 
 using code_symbol = std::map<char, size_t>;
+using reverse_code_symbol = std::map<size_t, char>;
 
 // Cannot use code_symbol::value_type because this will make the key const.
 // Find NOTE(1)
@@ -55,6 +57,27 @@ symbol_queue<> generate_symbols(std::istream& input, Encoding encoding = Encodin
 	return symbols_queue;
 }
 
+reverse_code_symbol read_symbols(std::istream& input, Encoding encoding = Encoding::HUFFMAN) {
+	reverse_code_symbol symbols;
+	char c;
+	input.get(c);
+
+	// should not happen, the input stream should at least contain the file header
+	if (!input.good())
+		return {};
+
+	int len = c;
+	for (int i = 1; i <= len; ++i) {
+		char key;
+		if (!input.get(key))
+			return {};
+
+		symbols[i] = key;
+	}
+
+	return symbols;
+}
+
 symbol_queue<> generate_priority_queue(code_symbol& symbols) {
 	symbol_queue q{};
 	for (const auto& s: symbols)
@@ -69,6 +92,8 @@ enum class filezone: std::int8_t {
 	DATA
 };
 
+const std::int8_t BYTE_LEN = 8;
+
 class Compressor {
 public:
 	Compressor(symbol_queue<>& symbols);
@@ -82,9 +107,21 @@ private:
 	filezone _zone = filezone::HEADER_SIZE; 
 	std::int8_t _code_number = 0;
 	std::byte _current_byte;
+	size_t _current_len = 0;
 	std::int8_t _bit_number = 8;
+};
 
-	static const std::int8_t BIT_LEN = 8;
+class Decompressor {
+public:
+	Decompressor(reverse_code_symbol& symbols): _symbols{symbols} {}
+	Decompressor(reverse_code_symbol&& symbols): _symbols{symbols} {}
+
+	std::optional<std::byte> next(std::istream& input);
+private:
+	reverse_code_symbol _symbols;
+	std::int8_t _bit_number = 1;
+	std::byte _current_byte;
+	int _current_len = 0;
 };
 
 Compressor::Compressor(symbol_queue<>& queue): _queue{queue} {
@@ -122,42 +159,71 @@ std::optional<std::byte> Compressor::next(std::istream& input) {
 	case filezone::DATA_SIZE:
 		_zone = filezone::DATA;
 		// NOTE: set to a static value for now
-		return std::byte{3};
+		return std::byte{6};
 	default:
 		// Do the rest of this function
 		break;
 	}
 
+	// all bytes have been read
+	if (_current_len == 0 && !input.good())
+		return {};
+	/*
 	if (!input.get(c))
 		return opt;
 	size_t len = _symbols[c];
+	*/
 
 	while (true) {
-		_current_byte <<= 1;
+		if (_current_len == 0) {
+			char c;
+			if (!input.get(c))
+				break;
+			_current_len = _symbols[c];
+		}
+
 		// BUG: the length of the longest (ie rarest) symbol should be len-1 but with the last bit set to 1
 		std::byte mask = std::byte{0x1} << (_bit_number-1);
-		if (len == 1)
+		if (_current_len == 1)
 			_current_byte &= ~mask;
 		else
 			_current_byte |= mask;
 
+		--_current_len;
 		--_bit_number;
 		if (_bit_number == 0) {
-			_bit_number = Compressor::BIT_LEN;
+			_bit_number = BYTE_LEN;
 			break;
-		}
-
-		--len;
-		if (len == 0) {
-			if (!input.get(c))
-				break;
-			len = _symbols[c];
 		}
 	}
 
 	opt = _current_byte;
 	_current_byte = std::byte{0};
 	return opt;
+}
+
+std::optional<std::byte> Decompressor::next(std::istream& input) {
+	int read_bit_len = 0;
+	while (true) {
+		++_current_len;
+		--_bit_number;
+		if (_bit_number == 0) {
+			char c;
+			if (!input.get(c))
+				return {};
+			_current_byte = std::byte{static_cast<unsigned char>(c)};
+			_bit_number = BYTE_LEN;
+		}
+
+		std::byte mask = std::byte{0x1} << (_bit_number-1);
+		std::byte tmp = _current_byte & mask;
+		bool is_set = tmp == mask;
+		if (!is_set) {
+			auto key = _current_len;
+			_current_len = 0;
+			return std::byte{static_cast<unsigned char>(_symbols[key])};
+		}
+	}
 }
 
 void compress(options& opts, Encoding encoding = Encoding::HUFFMAN) {
@@ -173,6 +239,23 @@ void compress(options& opts, Encoding encoding = Encoding::HUFFMAN) {
 	output.flush();
 }
 
+void decompress(options& opts, Encoding encoding = Encoding::HUFFMAN) {
+	auto input = std::ifstream(opts.input_file, std::ios_base::binary);
+	Decompressor decomp { read_symbols(input, encoding) };
+
+	auto output = std::ofstream{opts.output_file, std::ios_base::binary};
+
+	char c;
+	input.get(c);
+	int filesize = c;
+	for (auto byte = decomp.next(input); byte.has_value() && filesize > 0;) {
+		output.put(static_cast<char>(byte.value()));
+
+		byte = decomp.next(input);
+		--filesize;
+	}
+}
+
 int main(int argc, char** argv)
 {
 	options opts;
@@ -184,9 +267,12 @@ int main(int argc, char** argv)
 	if (opts.compression) {
 		compress(opts);
 	} else {
+		decompress(opts);
+		/*
 		ReverseCodewordReader reader { opts.input_file };
 		std::cout << "Writing the initial data to " << opts.output_file << '\n';
 		write_to_file(output, reader);
+		*/
 	}
 
 	return 0;
