@@ -6,7 +6,8 @@
 #include <queue>
 #include <cstddef>
 #include <sys/types.h>
-#include "elbaf.h"
+#include <optional>
+#include "params.h"
 
 using namespace elbaf;
 

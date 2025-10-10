@@ -3,9 +3,8 @@
 #include <cassert>
 #include <filesystem>
 
-#include "elbaf.h"
+#include "params.h"
 
-using namespace std;
 
 namespace elbaf {
 
