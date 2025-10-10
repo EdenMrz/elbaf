@@ -1,4 +1,6 @@
+#include <cstdio>
 #include <iostream>
+#include <filesystem>
 #include <fstream>
 #include <map>
 #include <queue>
@@ -90,16 +92,21 @@ enum class filezone: std::int8_t {
 	DATA
 };
 
+const std::int8_t FILESIZE_NB_BYTES = 4;
 const std::int8_t BYTE_LEN = 8;
+using filesize_t = std::uint32_t;
 
 class Compressor {
 public:
-	Compressor(symbol_queue<>& symbols);
-	Compressor(symbol_queue<>&& symbols);
+	Compressor(filesize_t size, symbol_queue<>& symbols);
+	Compressor(filesize_t size, symbol_queue<>&& symbols);
 	std::optional<std::byte> next(std::istream& input);
 private:
 	void generate_symbols();
 private:
+	// stored as a 4 byte number in the header
+	filesize_t _filesize;
+	std::uint8_t _filesize_byte_number = 0;
 	code_symbol _symbols;
 	symbol_queue<> _queue;
 	filezone _zone = filezone::HEADER_SIZE; 
@@ -122,10 +129,10 @@ private:
 	int _current_len = 0;
 };
 
-Compressor::Compressor(symbol_queue<>& queue): _queue{queue} {
+Compressor::Compressor(filesize_t size, symbol_queue<>& queue): _filesize{size}, _queue{queue} {
 	generate_symbols();
 }
-Compressor::Compressor(symbol_queue<>&& queue): _queue{queue} {
+Compressor::Compressor(filesize_t size, symbol_queue<>&& queue): _filesize{size}, _queue{queue} {
 	generate_symbols();
 }
 void Compressor::generate_symbols() {
@@ -155,9 +162,14 @@ std::optional<std::byte> Compressor::next(std::istream& input) {
 		}
 		_zone = filezone::DATA_SIZE;
 	case filezone::DATA_SIZE:
-		_zone = filezone::DATA;
-		// NOTE: set to a static value for now
-		return std::byte{6};
+		if (_filesize_byte_number == 4) {
+			_zone = filezone::DATA;
+		} else {
+			filesize_t tmp = _filesize >> (8*_filesize_byte_number) & 0xff;
+			std::byte ret { static_cast<unsigned char>(tmp) };
+			++_filesize_byte_number;
+			return ret;
+		}
 	default:
 		// Do the rest of this function
 		break;
@@ -166,11 +178,6 @@ std::optional<std::byte> Compressor::next(std::istream& input) {
 	// all bytes have been read
 	if (_current_len == 0 && !input.good())
 		return {};
-	/*
-	if (!input.get(c))
-		return opt;
-	size_t len = _symbols[c];
-	*/
 
 	while (true) {
 		if (_current_len == 0) {
@@ -225,8 +232,9 @@ std::optional<std::byte> Decompressor::next(std::istream& input) {
 }
 
 void compress(options& opts, Encoding encoding = Encoding::HUFFMAN) {
+	std::uint32_t filesize = std::filesystem::file_size(opts.input_file);
 	auto input = std::ifstream(opts.input_file, std::ios_base::binary);
-	Compressor comp { generate_symbols(input, encoding) };
+	Compressor comp { filesize, generate_symbols(input, encoding) };
 
 	input.clear();
 	input.seekg(0, std::ios::beg);
@@ -243,9 +251,17 @@ void decompress(options& opts, Encoding encoding = Encoding::HUFFMAN) {
 
 	auto output = std::ofstream{opts.output_file, std::ios_base::binary};
 
-	char c;
-	input.get(c);
-	int filesize = c;
+	// BUG: take system endianness into account
+	filesize_t filesize = 0;
+	for (int i = 0; i < FILESIZE_NB_BYTES; ++i) {
+		char c;
+		input.get(c);
+		auto uc = static_cast<unsigned char>(c);
+		auto uic = static_cast<filesize_t>(uc);
+		// Be carefull of sign extension when casting from c's signed type to filesize's unsigned type
+		filesize = filesize + (static_cast<unsigned char>(c) << (8*i));
+	}
+
 	for (auto byte = decomp.next(input); byte.has_value() && filesize > 0;) {
 		output.put(static_cast<char>(byte.value()));
 

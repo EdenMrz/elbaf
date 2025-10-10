@@ -1,5 +1,5 @@
 # ELBAF
-**elbaf** is a command line tool for compressing/decompressing files. It currently uses Huffman encoding as its compression algorithm - other algorithms will be implemented in the future.
+**elbaf** is a command line tool for compressing/decompressing files. It uses Huffman encoding as its compression algorithm.
 
 Usage:
 ```
@@ -21,5 +21,8 @@ cmake --build build
 **elbaf** will by default appear under ```build/bin/elbaf```
 
 
-### Limitations
-The file to be compressed has to be 255 bytes maximum. This is due to the fact that the header in the compressed file stores the file size in one byte.
+### Header layout
+- 1 bytes: the number of symbols in the encoding table
+- N bytes: the symbols ordered from most used to least used (1 byte each)
+- 4 bytes: the file size
+- x bytes: the encoded file
