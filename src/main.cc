@@ -7,9 +7,20 @@
 #include <cstddef>
 #include <sys/types.h>
 #include <optional>
+#include <bit>
 #include "params.h"
 
 using namespace elbaf;
+
+constexpr inline auto fix_endianness(std::integral auto i) {
+	static_assert(std::endian::native == std::endian::big ||
+		std::endian::native == std::endian::little);
+
+	if constexpr (std::endian::native == std::endian::big)
+		return i;
+	else
+		return std::byteswap(i);
+}
 
 enum class Encoding {
 	HUFFMAN
@@ -106,6 +117,7 @@ private:
 	void generate_symbols();
 private:
 	// stored as a 4 byte number in the header
+	// in network byte order
 	filesize_t _filesize;
 	std::uint8_t _filesize_byte_number = 0;
 	code_symbol _symbols;
@@ -130,10 +142,12 @@ private:
 	int _current_len = 0;
 };
 
-Compressor::Compressor(filesize_t size, symbol_queue<>& queue): _filesize{size}, _queue{queue} {
+Compressor::Compressor(filesize_t size, symbol_queue<>& queue):
+	_filesize{fix_endianness(size)}, _queue{queue} {
 	generate_symbols();
 }
-Compressor::Compressor(filesize_t size, symbol_queue<>&& queue): _filesize{size}, _queue{queue} {
+Compressor::Compressor(filesize_t size, symbol_queue<>&& queue):
+	_filesize{fix_endianness(size)}, _queue{queue} {
 	generate_symbols();
 }
 void Compressor::generate_symbols() {
@@ -252,7 +266,6 @@ void decompress(options& opts, Encoding encoding = Encoding::HUFFMAN) {
 
 	auto output = std::ofstream{opts.output_file, std::ios_base::binary};
 
-	// BUG: take system endianness into account
 	filesize_t filesize = 0;
 	for (int i = 0; i < FILESIZE_NB_BYTES; ++i) {
 		char c;
@@ -262,6 +275,9 @@ void decompress(options& opts, Encoding encoding = Encoding::HUFFMAN) {
 		// Be carefull of sign extension when casting from c's signed type to filesize's unsigned type
 		filesize = filesize + (static_cast<unsigned char>(c) << (8*i));
 	}
+
+	// the read filesize uses network byte order
+	filesize = fix_endianness(filesize);
 
 	for (auto byte = decomp.next(input); byte.has_value() && filesize > 0;) {
 		output.put(static_cast<char>(byte.value()));

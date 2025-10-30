@@ -24,5 +24,5 @@ cmake --build build
 ### Header layout
 - 1 bytes: the number of symbols in the encoding table
 - N bytes: the symbols ordered from most used to least used (1 byte each)
-- 4 bytes: the file size
+- 4 bytes: the file size in network byte order
 - x bytes: the encoded file
