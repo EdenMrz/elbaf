@@ -1,5 +1,5 @@
+#include <print>
 #include <cstring>
-#include <iostream>
 #include <cassert>
 #include <filesystem>
 
@@ -9,12 +9,12 @@
 namespace elbaf {
 
 void print_usage() {
-	std::cout
-		<< "Usage:\n"
-		<< "  elbaf [options] inputfile outputfile\n\n"
-		<< "Options:\n"
-		<< "  -x: decompression\n"
-		<< '\n';
+	std::println(
+		"Usage:\n"
+		"  elbaf [options] inputfile outputfile\n\n"
+		"Options:\n"
+		"  -x: decompression\n"
+	);
 }
 
 bool check_parameters(int argc, char** argv, options* opts) {
@@ -33,7 +33,7 @@ bool check_parameters(int argc, char** argv, options* opts) {
 	}
 
 	if (!std::filesystem::exists(opts->input_file)) {
-		std::cout << opts->input_file << " does not exist\n";
+		std::println("{} does not exist", opts->input_file);
 		return false;
 	}
 
